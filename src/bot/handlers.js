@@ -13,6 +13,17 @@ export function registerHandlers(bot) {
         const message = ctx.update.message;
         const link = message?.link;
 
+        // Игнорируем сообщения старше 5 минут (при перезапуске бота)
+        if (message?.created_at) {
+            const messageAge = Date.now() - message.created_at;
+            const FIVE_MINUTES = 5 * 60 * 1000;
+
+            if (messageAge > FIVE_MINUTES) {
+                console.log('[Handler] Ignoring old message (age:', Math.round(messageAge / 1000), 'seconds)');
+                return;
+            }
+        }
+
         if (link?.type === 'forward') {
             await handleForwardedMessage(ctx, link.chat_id, bot);
         }
