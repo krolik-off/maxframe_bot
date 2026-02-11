@@ -14,6 +14,11 @@ export function registerHandlers(bot) {
         const message = ctx.update.message;
         const link = message?.link;
 
+        // Реагируем только на личные сообщения боту
+        if (message?.recipient?.chat_type !== 'dialog') {
+            return;
+        }
+
         // Игнорируем сообщения старше 5 минут (при перезапуске бота)
         if (message?.created_at) {
             const messageAge = Date.now() - message.created_at;
