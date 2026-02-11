@@ -64,7 +64,7 @@ async function handleForwardedMessage(ctx, channelId, bot) {
 
         // Отправляем текстовую статистику
         const textStats = formatTextStats(statsData);
-        return ctx.reply(textStats);
+        return ctx.reply(textStats, { format: 'markdown' });
     } catch (e) {
         console.error('[Handler] Image generation failed:', e);
         return ctx.reply(`Информация о канале:\n${statsData.channelName || channelId}`);
@@ -82,27 +82,35 @@ function formatTextStats(data) {
 
     const formatDelta = (num) => {
         if (num === null || num === undefined) return '—';
-        const sign = num >= 0 ? '+' : '';
-        return sign + formatNum(num);
+        const abs = Math.abs(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+        const sign = num >= 0 ? '+' : '-';
+        return sign + abs;
     };
 
     const dyn = data.dynamics || {};
 
+    const channelTitle = data.channelName || 'Канал';
+    const channelLine = data.link
+        ? `📢   [${channelTitle}](${data.link})`
+        : `📢   ${channelTitle}`;
+
     const lines = [
-        `📢  ${data.channelName || 'Канал'}`,
-        data.link ? `🔗  ${data.link}` : null,
-        `👥  ${formatNum(data.subscribers)}`,
+        channelLine,
+        `👥   ${formatNum(data.subscribers)}`,
         '',
-        '📊  Подписчики:',
+        '📊   Подписчики:',
         `├ Сегодня: ${formatDelta(dyn.today)}`,
         `├ Неделя: ${formatDelta(dyn.week)}`,
         `└ Месяц: ${formatDelta(dyn.month)}`,
         '',
-        '👁️  Охваты:',
+        '👁   Охваты:',
         `├ 24 часа: ${formatNum(data.views24h)}`,
         `└ 48 часов: ${formatNum(data.views48h)}`,
         '',
-        data.er !== null ? `ER: ${data.er}%` : null
+        data.er !== null ? `ER: ${data.er}%` : null,
+        '',
+        'Данные из 🤖 [MaxFrame](https://max.ru/id026410900305_1_bot) бота.',
+        'Сервис аналитики макс каналов - 💻 [maxframe.ru](http://maxframe.ru/)'
     ];
 
     return lines.filter(line => line !== null).join('\n');
