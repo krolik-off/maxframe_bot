@@ -1,5 +1,6 @@
 import MaxframeApi from '../services/maxframeApi.js';
 import { generateStatsImage } from '../services/imageGenerator.js';
+import { parseGrowth } from '../utils/parsers.js';
 
 const maxframeApi = new MaxframeApi();
 
@@ -80,10 +81,17 @@ function formatTextStats(data) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     };
 
+    const toNumber = (val) => {
+        if (val === null || val === undefined) return null;
+        if (typeof val === 'number') return val;
+        return parseGrowth(val);
+    };
+
     const formatDelta = (num) => {
-        if (num === null || num === undefined) return '—';
-        const abs = Math.abs(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-        const sign = num >= 0 ? '+' : '-';
+        const n = toNumber(num);
+        if (n === null) return '—';
+        const abs = Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+        const sign = n >= 0 ? '+' : '-';
         return sign + abs;
     };
 
