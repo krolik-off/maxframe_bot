@@ -30,8 +30,19 @@ export function registerHandlers(bot) {
             }
         }
 
-        if (link?.type === 'forward') {
-            await handleForwardedMessage(ctx, link.chat_id, bot);
+        try {
+            if (link?.type === 'forward') {
+                await handleForwardedMessage(ctx, link.chat_id, bot);
+            }
+        } catch (e) {
+            if (e.response?.code === 'chat.denied' || e.status === 403) {
+                console.error('[Handler] chat.denied error, skipping:', e.message);
+                return;
+            }
+            console.error('[Handler] Unhandled error:', e);
+            try {
+                await ctx.reply('Ошибка получения данных обратитесь в службу поддержки бота.');
+            } catch (_) {}
         }
     });
 }
@@ -71,6 +82,9 @@ async function handleForwardedMessage(ctx, channelId, bot) {
         const textStats = formatTextStats(statsData);
         return ctx.reply(textStats, { format: 'markdown' });
     } catch (e) {
+        if (e.response?.code === 'chat.denied' || e.status === 403) {
+            throw e;
+        }
         console.error('[Handler] Image generation failed:', e);
         return ctx.reply(`Информация о канале:\n${statsData.channelName || channelId}`);
     }
