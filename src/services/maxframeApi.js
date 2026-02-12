@@ -36,7 +36,15 @@ class MaxframeApi {
                 return null;
             }
 
-            return this._normalizeResponse(json.data);
+            const result = this._normalizeResponse(json.data);
+
+            // Если нет подписчиков и имени — канала нет в базе
+            if (!result.subscribers && !result.channelName) {
+                console.log('[MaxframeApi] Channel not found in database (empty data)');
+                return null;
+            }
+
+            return result;
         } catch (error) {
             console.error('[MaxframeApi] Request failed:', error.message);
             return null;

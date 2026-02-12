@@ -45,16 +45,15 @@ async function handleForwardedMessage(ctx, channelId, bot) {
     // Получаем данные из API
     let statsData = await maxframeApi.getChannelProfile(channelId);
 
-    // Fallback на bot.api если maxframe не вернул данные
+    // Если канала нет в базе MaxFrame — просим добавить
     if (!statsData) {
-        console.log('[Handler] Trying bot.api.getChat fallback');
-        try {
-            const chat = await bot.api.getChat(channelId);
-            statsData = createFallbackStatsData(chat);
-        } catch (e) {
-            console.error('[Handler] Fallback failed:', e.message);
-            return ctx.reply('Не удалось получить информацию о канале');
-        }
+        console.log('[Handler] Channel not found in MaxFrame:', channelId);
+        return ctx.reply(
+            'Этот канал ещё не добавлен в базу MaxFrame.\n\n' +
+            'Добавьте его на сайте [maxframe.ru](https://maxframe.ru) и попробуйте снова.\n\n' +
+            '📖 [Инструкция по добавлению канала](https://maxframe.ru/maxframe-bot/)',
+            { format: 'markdown' }
+        );
     }
 
     statsData.updatedAt = new Date();
@@ -127,27 +126,4 @@ function formatTextStats(data) {
     ];
 
     return lines.filter(line => line !== null).join('\n');
-}
-
-/**
- * Создание объекта statsData из данных bot.api
- */
-function createFallbackStatsData(chat) {
-    return {
-        channelName: chat.title || null,
-        subscribers: chat.participants_count || null,
-        isPublic: chat.is_public ?? null,
-        description: chat.description || null,
-        categories: [],
-        isSuspicious: false,
-        dynamics: { today: null, week: null, month: null },
-        avgViews: null,
-        views24h: null,
-        views48h: null,
-        er: null,
-        mentions: { from: 0, to: 0 },
-        advertisers: [],
-        advertised: [],
-        chartData: null
-    };
 }
