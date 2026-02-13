@@ -12,7 +12,7 @@ export function registerCommands(bot) {
     ]);
 
     // Команда start
-    bot.command('start', (ctx) => {
+    bot.command('start', async (ctx) => {
         const sender = ctx.update.message?.sender;
         const name = sender?.first_name || '';
 
@@ -35,6 +35,10 @@ export function registerCommands(bot) {
 
 🔗 Подробная аналитика: maxframe.ru`;
 
-        return ctx.reply(welcomeMessage);
+        try {
+            return await ctx.reply(welcomeMessage);
+        } catch (e) {
+            console.error('[Command] Failed to reply /start:', e.message);
+        }
     });
 }

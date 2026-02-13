@@ -4,6 +4,30 @@ import { parseGrowth } from '../utils/parsers.js';
 
 const maxframeApi = new MaxframeApi();
 
+// Rate limit: 10 запросов в минуту на пользователя
+const RATE_LIMIT = 10;
+const RATE_WINDOW = 60 * 1000;
+const userRequests = new Map();
+
+function isRateLimited(userId) {
+    const now = Date.now();
+    const timestamps = userRequests.get(userId) || [];
+    const recent = timestamps.filter(t => now - t < RATE_WINDOW);
+    recent.push(now);
+    userRequests.set(userId, recent);
+    return recent.length > RATE_LIMIT;
+}
+
+// Очистка старых записей каждые 5 минут
+setInterval(() => {
+    const now = Date.now();
+    for (const [userId, timestamps] of userRequests) {
+        const recent = timestamps.filter(t => now - t < RATE_WINDOW);
+        if (recent.length === 0) userRequests.delete(userId);
+        else userRequests.set(userId, recent);
+    }
+}, 5 * 60 * 1000);
+
 /**
  * Регистрация обработчиков событий
  * @param {import('@maxhub/max-bot-api').Bot} bot
@@ -28,6 +52,17 @@ export function registerHandlers(bot) {
                 console.log('[Handler] Ignoring old message (age:', Math.round(messageAge / 1000), 'seconds)');
                 return;
             }
+        }
+
+        // Rate limit
+        console.log('[Handler] Sender:', JSON.stringify(message?.sender));
+        const senderId = message?.sender?.user_id;
+        if (senderId && isRateLimited(senderId)) {
+            console.log('[Handler] Rate limited user:', senderId);
+            try {
+                await ctx.reply('Слишком много запросов. Подождите минуту и попробуйте снова.');
+            } catch (_) {}
+            return;
         }
 
         try {
@@ -59,12 +94,17 @@ async function handleForwardedMessage(ctx, channelId, bot) {
     // Если канала нет в базе MaxFrame — просим добавить
     if (!statsData) {
         console.log('[Handler] Channel not found in MaxFrame:', channelId);
-        return ctx.reply(
-            'Этот канал ещё не добавлен в базу MaxFrame.\n\n' +
-            'Добавьте его на сайте [maxframe.ru](https://maxframe.ru) и попробуйте снова.\n\n' +
-            '📖 [Инструкция по добавлению канала](https://maxframe.ru/maxframe-bot/)',
-            { format: 'markdown' }
-        );
+        try {
+            return await ctx.reply(
+                'Этот канал ещё не добавлен в базу MaxFrame.\n\n' +
+                'Если канал открытый — добавьте его на сайте [maxframe.ru](https://maxframe.ru) и попробуйте снова.\n\n' +
+                'Если канал закрытый — ознакомьтесь с 📖 [инструкцией по добавлению](https://maxframe.ru/maxframe-bot/), процесс немного отличается.',
+                { format: 'markdown' }
+            );
+        } catch (e) {
+            console.error('[Handler] Failed to reply (channel not found):', e.message);
+        }
+        return;
     }
 
     statsData.updatedAt = new Date();
@@ -86,7 +126,11 @@ async function handleForwardedMessage(ctx, channelId, bot) {
             throw e;
         }
         console.error('[Handler] Image generation failed:', e);
-        return ctx.reply(`Информация о канале:\n${statsData.channelName || channelId}`);
+        try {
+            return await ctx.reply(`Информация о канале:\n${statsData.channelName || channelId}`);
+        } catch (_) {
+            console.error('[Handler] Failed to send fallback reply');
+        }
     }
 }
 
