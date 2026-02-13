@@ -1,3 +1,5 @@
+import stats from '../services/stats.js';
+
 /**
  * Регистрация команд бота
  * @param {import('@maxhub/max-bot-api').Bot} bot
@@ -34,6 +36,9 @@ export function registerCommands(bot) {
 └ График роста канала
 
 🔗 Подробная аналитика: maxframe.ru`;
+
+        const userId = sender?.user_id;
+        stats.trackStart(userId, name);
 
         try {
             return await ctx.reply(welcomeMessage);

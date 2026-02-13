@@ -1,6 +1,7 @@
 import MaxframeApi from '../services/maxframeApi.js';
 import { generateStatsImage } from '../services/imageGenerator.js';
 import { parseGrowth } from '../utils/parsers.js';
+import stats from '../services/stats.js';
 
 const maxframeApi = new MaxframeApi();
 
@@ -55,10 +56,10 @@ export function registerHandlers(bot) {
         }
 
         // Rate limit
-        console.log('[Handler] Sender:', JSON.stringify(message?.sender));
         const senderId = message?.sender?.user_id;
         if (senderId && isRateLimited(senderId)) {
             console.log('[Handler] Rate limited user:', senderId);
+            stats.trackRateLimit();
             try {
                 await ctx.reply('Слишком много запросов. Подождите минуту и попробуйте снова.');
             } catch (_) {}
@@ -87,6 +88,7 @@ export function registerHandlers(bot) {
  */
 async function handleForwardedMessage(ctx, channelId, bot) {
     console.log('[Handler] Forward from channel:', channelId);
+    stats.trackRequest(ctx.update.message?.sender?.user_id);
 
     // Получаем данные из API
     let statsData = await maxframeApi.getChannelProfile(channelId);
@@ -94,6 +96,7 @@ async function handleForwardedMessage(ctx, channelId, bot) {
     // Если канала нет в базе MaxFrame — просим добавить
     if (!statsData) {
         console.log('[Handler] Channel not found in MaxFrame:', channelId);
+        stats.trackNotFound();
         try {
             return await ctx.reply(
                 'Этот канал ещё не добавлен в базу MaxFrame.\n\n' +
