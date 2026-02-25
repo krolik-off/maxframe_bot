@@ -64,6 +64,11 @@ class MaxframeApi {
         const history = historyData.history || [];
         const latestHistory = history.length > 0 ? history[history.length - 1] : null;
 
+        const viewsHistory = historyData.views || [];
+        const latestViews = viewsHistory.length > 0
+            ? [...viewsHistory].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).at(-1)
+            : null;
+
         const subscribers = channelInfo.subscribers
             || channelInfo.participants_count
             || latestHistory?.followers_cnt
@@ -86,9 +91,9 @@ class MaxframeApi {
                 week: extraData.growth?.week ?? null,
                 month: extraData.growth?.month ?? null
             },
-            avgViews: metrics.avg_views_1d || metrics.avg_views_day || null,
-            views24h: metrics.avg_views_1d || null,
-            views48h: metrics.avg_views_7d || null,
+            avgViews: latestViews?.views ?? metrics.avg_views_1d ?? null,
+            views24h: latestViews?.views ?? null,
+            views48h: latestViews?.views_48h ?? null,
             er: extraData.er_metric || channelInfo.er || channelInfo.engagement_rate || null,
             mentions: {
                 from: channelInfo.mentions_from || channelInfo.mentioned_by || 0,
