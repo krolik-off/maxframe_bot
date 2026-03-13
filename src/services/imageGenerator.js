@@ -10,6 +10,30 @@ import { parseGrowth, parseChartData, parseAdvertisers } from '../utils/parsers.
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const logoPath = resolve(__dirname, '../../android-chrome-512x512.png');
 const logoBase64 = 'data:image/png;base64,' + readFileSync(logoPath).toString('base64');
+const apexchartsJs = readFileSync(resolve(__dirname, '../assets/apexcharts.min.js'), 'utf8');
+
+const MAX_CONCURRENT = 2;
+let activeCount = 0;
+const queue = [];
+
+function acquireSemaphore() {
+    return new Promise((resolve) => {
+        if (activeCount < MAX_CONCURRENT) {
+            activeCount++;
+            resolve();
+        } else {
+            queue.push(resolve);
+        }
+    });
+}
+
+function releaseSemaphore() {
+    if (queue.length > 0) {
+        queue.shift()();
+    } else {
+        activeCount--;
+    }
+}
 
 /**
  * Генерация картинки статистики канала
@@ -60,11 +84,15 @@ export async function generateStatsImage(data) {
         updatedAt: data.updatedAt
     });
 
+    await acquireSemaphore();
+
     const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Image generation timeout')), 25000)
     );
 
-    const image = await Promise.race([
+    let image;
+    try {
+        image = await Promise.race([
         nodeHtmlToImage({
             html,
             quality: 100,
@@ -72,11 +100,14 @@ export async function generateStatsImage(data) {
             puppeteerArgs: {
                 args: ['--no-sandbox', '--disable-setuid-sandbox']
             },
-            waitUntil: 'networkidle2',
+            waitUntil: 'networkidle0',
             timeout: 25000
         }),
         timeoutPromise
-    ]);
+        ]);
+    } finally {
+        releaseSemaphore();
+    }
 
     return image;
 }
@@ -108,10 +139,9 @@ function buildHtml(params) {
     <html>
     <head>
         <meta charset="UTF-8">
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script>${apexchartsJs}</script>
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-            * { font-family: 'Inter', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+            * { font-family: Arial, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
             body { width: ${config.image.width}px; background: #f5f5f5; padding: 28px; }
             .section { background: #fff; border-radius: 20px; padding: 36px; margin-bottom: 20px; }
             .section-title { font-size: 26px; font-weight: 600; color: #333; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 4px solid #7c3aed; display: inline-block; }
