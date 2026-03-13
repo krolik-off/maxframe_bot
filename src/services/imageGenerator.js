@@ -60,16 +60,23 @@ export async function generateStatsImage(data) {
         updatedAt: data.updatedAt
     });
 
-    const image = await nodeHtmlToImage({
-        html,
-        quality: 100,
-        type: 'png',
-        puppeteerArgs: {
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        },
-        waitUntil: 'networkidle0',
-        timeout: 30000
-    });
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Image generation timeout')), 25000)
+    );
+
+    const image = await Promise.race([
+        nodeHtmlToImage({
+            html,
+            quality: 100,
+            type: 'png',
+            puppeteerArgs: {
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            },
+            waitUntil: 'networkidle2',
+            timeout: 25000
+        }),
+        timeoutPromise
+    ]);
 
     return image;
 }
