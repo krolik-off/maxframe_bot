@@ -40,10 +40,13 @@ export function registerCommands(bot) {
         const userId = sender?.user_id;
         stats.trackStart(userId, name);
 
+        console.log('[Command] Sending /start reply to:', userId);
         try {
-            return await ctx.reply(welcomeMessage);
+            const result = await ctx.reply(welcomeMessage);
+            console.log('[Command] /start reply sent OK');
+            return result;
         } catch (e) {
-            console.error('[Command] Failed to reply /start:', e.message);
+            console.error('[Command] Failed to reply /start:', e.message, JSON.stringify(e.response || e));
         }
     });
 }
