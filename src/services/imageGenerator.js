@@ -20,18 +20,22 @@ function acquireSemaphore() {
     return new Promise((resolve) => {
         if (activeCount < MAX_CONCURRENT) {
             activeCount++;
+            console.log(`[ImageQueue] Started (active: ${activeCount}/${MAX_CONCURRENT}, queued: ${queue.length})`);
             resolve();
         } else {
             queue.push(resolve);
+            console.log(`[ImageQueue] Queued (active: ${activeCount}/${MAX_CONCURRENT}, queued: ${queue.length})`);
         }
     });
 }
 
 function releaseSemaphore() {
     if (queue.length > 0) {
+        console.log(`[ImageQueue] Next from queue (active: ${activeCount}/${MAX_CONCURRENT}, queued: ${queue.length - 1})`);
         queue.shift()();
     } else {
         activeCount--;
+        console.log(`[ImageQueue] Done (active: ${activeCount}/${MAX_CONCURRENT}, queued: 0)`);
     }
 }
 
