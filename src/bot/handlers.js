@@ -88,8 +88,8 @@ export function registerHandlers(bot) {
  */
 async function handleForwardedMessage(ctx, channelId, bot) {
     const senderId = ctx.update.message?.sender?.user_id;
+    const startTime = Date.now();
     console.log(`[Handler] Forward from channel: ${channelId}, user: ${senderId}`);
-    stats.trackRequest(senderId);
 
     // Получаем данные из API
     console.log(`[Handler] Fetching channel data: ${channelId}`);
@@ -131,13 +131,16 @@ async function handleForwardedMessage(ctx, channelId, bot) {
         // Отправляем текстовую статистику
         const textStats = formatTextStats(statsData);
         const result = await ctx.reply(textStats, { format: 'markdown' });
-        console.log(`[Handler] Done for channel: ${channelId}`);
+        const responseTime = Date.now() - startTime;
+        console.log(`[Handler] Done for channel: ${channelId} in ${responseTime}ms`);
+        stats.trackRequest(senderId, channelId, statsData.channelName, responseTime, 1);
         return result;
     } catch (e) {
         if (e.response?.code === 'chat.denied' || e.status === 403) {
             throw e;
         }
         console.error('[Handler] Image generation failed:', e.message);
+        stats.trackRequest(senderId, channelId, statsData.channelName, Date.now() - startTime, 0);
         try {
             return await ctx.reply(`Информация о канале:\n${statsData.channelName || channelId}`);
         } catch (_) {

@@ -15,6 +15,7 @@
   "dependencies": {
     "@maxhub/max-bot-api": "^0.2.1",
     "apexcharts": "^5.10.3",
+    "better-sqlite3": "^12.8.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "node-html-to-image": "^5.0.0"

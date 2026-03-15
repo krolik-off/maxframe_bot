@@ -1,10 +1,25 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import db from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../../data');
 const STATS_FILE = resolve(DATA_DIR, 'stats.json');
+
+const upsertUser = db.prepare(`
+    INSERT INTO users (id, name, first_seen, last_seen, total_starts, total_requests)
+    VALUES (?, ?, ?, ?, 0, 0)
+    ON CONFLICT(id) DO UPDATE SET last_seen = excluded.last_seen
+`);
+
+const incrementStarts = db.prepare(`UPDATE users SET total_starts = total_starts + 1 WHERE id = ?`);
+const incrementRequests = db.prepare(`UPDATE users SET total_requests = total_requests + 1 WHERE id = ?`);
+
+const insertRequest = db.prepare(`
+    INSERT INTO requests (user_id, channel_id, channel_name, timestamp, response_time_ms, success)
+    VALUES (?, ?, ?, ?, ?, ?)
+`);
 
 class Stats {
     constructor() {
@@ -59,15 +74,41 @@ class Stats {
             this.data.users[userId] = { firstSeen: this._today(), name: name || null };
         }
         this._save();
+
+        if (userId) {
+            try {
+                upsertUser.run(userId, name || null, this._today(), new Date().toISOString());
+                incrementStarts.run(userId);
+            } catch (e) {
+                console.error('[Stats] DB error trackStart:', e.message);
+            }
+        }
     }
 
-    trackRequest(userId) {
+    trackRequest(userId, channelId, channelName, responseTimeMs, success = 1) {
         this.data.totalRequests++;
         this._getDay().requests++;
         if (!this.data.users[userId]) {
             this.data.users[userId] = { firstSeen: this._today(), name: null };
         }
         this._save();
+
+        if (userId) {
+            try {
+                upsertUser.run(userId, null, this._today(), new Date().toISOString());
+                incrementRequests.run(userId);
+                insertRequest.run(
+                    userId,
+                    channelId ? String(channelId) : null,
+                    channelName || null,
+                    new Date().toISOString(),
+                    responseTimeMs || null,
+                    success
+                );
+            } catch (e) {
+                console.error('[Stats] DB error trackRequest:', e.message);
+            }
+        }
     }
 
     trackNotFound() {
