@@ -87,10 +87,12 @@ export function registerHandlers(bot) {
  * Обработка пересланного сообщения
  */
 async function handleForwardedMessage(ctx, channelId, bot) {
-    console.log('[Handler] Forward from channel:', channelId);
-    stats.trackRequest(ctx.update.message?.sender?.user_id);
+    const senderId = ctx.update.message?.sender?.user_id;
+    console.log(`[Handler] Forward from channel: ${channelId}, user: ${senderId}`);
+    stats.trackRequest(senderId);
 
     // Получаем данные из API
+    console.log(`[Handler] Fetching channel data: ${channelId}`);
     let statsData = await maxframeApi.getChannelProfile(channelId);
 
     // Если канала нет в базе MaxFrame — просим добавить
@@ -110,12 +112,17 @@ async function handleForwardedMessage(ctx, channelId, bot) {
         return;
     }
 
+    console.log(`[Handler] Channel data received: ${statsData.channelName}, subs: ${statsData.subscribers}`);
     statsData.updatedAt = new Date();
 
     // Генерируем и отправляем картинку
     try {
+        console.log(`[Handler] Generating image for channel: ${channelId}`);
         const imageBuffer = await generateStatsImage(statsData);
+        console.log(`[Handler] Image generated, uploading...`);
+
         const uploaded = await bot.api.uploadImage({ source: imageBuffer });
+        console.log(`[Handler] Image uploaded, sending reply...`);
 
         await ctx.reply('', {
             attachments: [uploaded.toJson()]
@@ -123,12 +130,14 @@ async function handleForwardedMessage(ctx, channelId, bot) {
 
         // Отправляем текстовую статистику
         const textStats = formatTextStats(statsData);
-        return ctx.reply(textStats, { format: 'markdown' });
+        const result = await ctx.reply(textStats, { format: 'markdown' });
+        console.log(`[Handler] Done for channel: ${channelId}`);
+        return result;
     } catch (e) {
         if (e.response?.code === 'chat.denied' || e.status === 403) {
             throw e;
         }
-        console.error('[Handler] Image generation failed:', e);
+        console.error('[Handler] Image generation failed:', e.message);
         try {
             return await ctx.reply(`Информация о канале:\n${statsData.channelName || channelId}`);
         } catch (_) {
