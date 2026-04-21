@@ -19,12 +19,15 @@ process.on('unhandledRejection', (err) => {
 });
 
 async function registerWebhook() {
-    const url = `https://botapi.max.ru/subscriptions?access_token=${config.bot.token}`;
+    const url = `https://platform-api.max.ru/subscriptions`;
     const webhookUrl = `https://89.23.101.188/webhook`;
 
     const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': config.bot.token
+        },
         body: JSON.stringify({ url: webhookUrl })
     });
 
