@@ -13,7 +13,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@maxhub/max-bot-api": "^0.2.1",
+    "@maxhub/max-bot-api": "^0.2.2",
     "apexcharts": "^5.10.3",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^17.2.3",
