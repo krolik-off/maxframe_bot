@@ -19,6 +19,14 @@ function isRateLimited(userId) {
     return recent.length > RATE_LIMIT;
 }
 
+function isUnreachable(e) {
+    const code = e.response?.code;
+    return code === 'chat.denied'
+        || code === 'dialog.not.found'
+        || e.status === 403
+        || e.status === 404;
+}
+
 // Очистка старых записей каждые 5 минут
 setInterval(() => {
     const now = Date.now();
@@ -71,8 +79,8 @@ export function registerHandlers(bot) {
                 await handleForwardedMessage(ctx, link.chat_id, bot);
             }
         } catch (e) {
-            if (e.response?.code === 'chat.denied' || e.status === 403) {
-                console.error('[Handler] chat.denied error, skipping:', e.message);
+            if (isUnreachable(e)) {
+                console.error('[Handler] Unreachable chat, skipping:', e.message);
                 return;
             }
             console.error('[Handler] Unhandled error:', e);
@@ -136,7 +144,7 @@ async function handleForwardedMessage(ctx, channelId, bot) {
         stats.trackRequest(senderId, channelId, statsData.channelName, responseTime, 1);
         return result;
     } catch (e) {
-        if (e.response?.code === 'chat.denied' || e.status === 403) {
+        if (isUnreachable(e)) {
             throw e;
         }
         console.error('[Handler] Image generation failed:', e.message);

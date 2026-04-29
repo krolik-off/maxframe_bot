@@ -236,9 +236,11 @@ function buildHtml(params) {
 function buildStatCard(label, value) {
     const isPositive = value !== null && value >= 0;
     const displayValue = value !== null ? (value >= 0 ? '+' : '−') + formatCompact(Math.abs(value)) : '—';
+    const len = displayValue.length;
+    const fontSize = len <= 5 ? 62 : len <= 6 ? 52 : 44;
     return `
         <div style="flex: 1; background: #f9f9f9; border-radius: 16px; padding: 24px; text-align: center; min-width: 0;">
-            <div style="font-size: 62px; font-weight: 700; color: ${value === null ? '#999' : (isPositive ? '#10b981' : '#ef4444')}; white-space: nowrap; overflow: hidden;">${displayValue}</div>
+            <div style="font-size: ${fontSize}px; font-weight: 700; color: ${value === null ? '#999' : (isPositive ? '#10b981' : '#ef4444')}; white-space: nowrap; overflow: hidden;">${displayValue}</div>
             <div style="font-size: 22px; color: #333; margin-top: 10px; font-weight: 600;">${label}</div>
         </div>
     `;
@@ -246,9 +248,11 @@ function buildStatCard(label, value) {
 
 function buildMetricCard(label, value, color = '#333', isPercent = false) {
     const displayValue = value !== null ? formatCompact(value) + (isPercent ? '%' : '') : '—';
+    const len = displayValue.length;
+    const fontSize = len <= 4 ? 72 : len <= 5 ? 60 : 50;
     return `
         <div style="flex: 1; background: #f9f9f9; border-radius: 16px; padding: 24px; text-align: center; min-width: 0;">
-            <div style="font-size: 72px; font-weight: 700; color: ${value !== null ? color : '#999'}; white-space: nowrap; overflow: hidden;">${displayValue}</div>
+            <div style="font-size: ${fontSize}px; font-weight: 700; color: ${value !== null ? color : '#999'}; white-space: nowrap; overflow: hidden;">${displayValue}</div>
             <div style="font-size: 22px; color: #333; margin-top: 10px; font-weight: 600;">${label}</div>
         </div>
     `;

@@ -46,6 +46,10 @@ export function registerCommands(bot) {
             console.log('[Command] /start reply sent OK');
             return result;
         } catch (e) {
+            const code = e.response?.code;
+            if (code === 'dialog.not.found' || code === 'chat.denied' || e.status === 403 || e.status === 404) {
+                return;
+            }
             console.error('[Command] Failed to reply /start:', e.message, JSON.stringify(e.response || e));
         }
     });
