@@ -59,15 +59,20 @@ app.get('/channel-info', async (req, res) => {
         return res.status(400).json({ error: 'Missing link parameter' });
     }
     try {
-        const token = inviteLink.split('/').pop();
-        const url = new URL('https://botapi.max.ru/chats');
-        url.searchParams.set('invite_link', token);
-        const apiRes = await fetch(url, {
-            headers: { 'Authorization': config.bot.token }
-        });
-        const data = await apiRes.json();
-        const fullLink = inviteLink.startsWith('http') ? inviteLink : `https://max.ru/join/${token}`;
-        const chat = (data.chats || []).find(c => c.link === fullLink);
+        const fullLink = inviteLink.startsWith('http') ? inviteLink : `https://max.ru/join/${inviteLink.split('/').pop()}`;
+        let marker = null;
+        let chat = null;
+
+        do {
+            const url = new URL('https://botapi.max.ru/chats');
+            url.searchParams.set('count', '100');
+            if (marker) url.searchParams.set('marker', marker);
+            const apiRes = await fetch(url, { headers: { 'Authorization': config.bot.token } });
+            const data = await apiRes.json();
+            chat = (data.chats || []).find(c => c.link === fullLink);
+            marker = data.marker || null;
+        } while (!chat && marker);
+
         if (!chat) {
             return res.status(404).json({ error: 'Channel not found. Make sure the bot is a member.' });
         }
