@@ -69,6 +69,8 @@ app.get('/channel-info', async (req, res) => {
             if (marker) url.searchParams.set('marker', marker);
             const apiRes = await fetch(url, { headers: { 'Authorization': config.bot.token } });
             const data = await apiRes.json();
+            console.log(`[API] chats page: ${data.chats?.length}, marker: ${data.marker}, looking for: ${fullLink}`);
+            data.chats?.forEach(c => console.log(`  link: ${c.link}`));
             chat = (data.chats || []).find(c => c.link === fullLink);
             marker = data.marker || null;
         } while (!chat && marker);
