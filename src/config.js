@@ -8,6 +8,12 @@ export default {
         apiUrl: process.env.MAXFRAME_API_URL || 'https://maxframe.ru/api/bot/channel-profile/',
         secretKey: process.env.MAXFRAME_SECRET_KEY
     },
+    webhook: {
+        url: process.env.WEBHOOK_URL
+    },
+    api: {
+        secretKey: process.env.API_SECRET_KEY
+    },
     image: {
         width: 1800
     }

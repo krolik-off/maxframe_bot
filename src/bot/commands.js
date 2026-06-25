@@ -11,7 +11,7 @@ export function registerCommands(bot) {
             name: 'start',
             description: 'Начать работу с ботом',
         },
-    ]);
+    ]).catch((e) => console.error('[Commands] setMyCommands failed:', e.message));
 
     // Команда start
     bot.command('start', async (ctx) => {

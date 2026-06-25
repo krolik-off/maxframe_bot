@@ -20,7 +20,7 @@ process.on('unhandledRejection', (err) => {
 
 async function registerWebhook() {
     const url = `https://platform-api.max.ru/subscriptions`;
-    const webhookUrl = `https://89.23.101.188/webhook`;
+    const webhookUrl = config.webhook.url;
 
     const res = await fetch(url, {
         method: 'POST',
@@ -37,6 +37,36 @@ async function registerWebhook() {
 
 const app = express();
 app.use(express.json());
+
+app.get('/channel-info', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || authHeader !== `Bearer ${config.api.secretKey}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const inviteLink = req.query.link;
+    if (!inviteLink) {
+        return res.status(400).json({ error: 'Missing link parameter' });
+    }
+    try {
+        const token = inviteLink.split('/').pop();
+        const url = new URL('https://botapi.max.ru/chats');
+        url.searchParams.set('invite_link', token);
+        const apiRes = await fetch(url, {
+            headers: { 'Authorization': config.bot.token }
+        });
+        const data = await apiRes.json();
+        const fullLink = inviteLink.startsWith('http') ? inviteLink : `https://max.ru/join/${token}`;
+        const chat = (data.chats || []).find(c => c.link === fullLink);
+        if (!chat) {
+            return res.status(404).json({ error: 'Channel not found. Make sure the bot is a member.' });
+        }
+        return res.json(chat);
+    } catch (e) {
+        console.error('[API] /channel-info error:', e.message);
+        return res.status(500).json({ error: e.message });
+    }
+});
 
 app.post('/webhook', (req, res) => {
     res.sendStatus(200);
