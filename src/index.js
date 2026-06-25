@@ -38,6 +38,16 @@ async function registerWebhook() {
 const app = express();
 app.use(express.json());
 
+app.get('/debug-chats', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || authHeader !== `Bearer ${config.api.secretKey}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const url = new URL('https://botapi.max.ru/chats');
+    const apiRes = await fetch(url, { headers: { 'Authorization': config.bot.token } });
+    return res.json(await apiRes.json());
+});
+
 app.get('/channel-info', async (req, res) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader || authHeader !== `Bearer ${config.api.secretKey}`) {
