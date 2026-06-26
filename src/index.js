@@ -29,7 +29,10 @@ async function registerWebhook() {
             'Content-Type': 'application/json',
             'Authorization': config.bot.token
         },
-        body: JSON.stringify({ url: webhookUrl })
+        body: JSON.stringify({
+            url: webhookUrl,
+            update_types: ['message_created', 'bot_added', 'bot_removed']
+        })
     });
 
     const data = await res.json();
