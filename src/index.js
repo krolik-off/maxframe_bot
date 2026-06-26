@@ -3,6 +3,7 @@ import { Bot } from '@maxhub/max-bot-api';
 import config from './config.js';
 import { registerCommands } from './bot/commands.js';
 import { registerHandlers } from './bot/handlers.js';
+import db from './services/db.js';
 
 const bot = new Bot(config.bot.token);
 
@@ -92,6 +93,8 @@ app.get('/channel-info', async (req, res) => {
 
     try {
         if (chatId) {
+            const cached = db.prepare('SELECT * FROM channels WHERE chat_id = ?').get(chatId);
+            if (cached) return res.json(cached);
             const url = new URL(`https://botapi.max.ru/chats/${chatId}`);
             const apiRes = await fetch(url, { headers: { 'Authorization': config.bot.token } });
             if (!apiRes.ok) return res.status(404).json({ error: 'Channel not found' });
@@ -99,6 +102,10 @@ app.get('/channel-info', async (req, res) => {
         }
 
         const fullLink = inviteLink.startsWith('http') ? inviteLink : `https://max.ru/join/${inviteLink.split('/').pop()}`;
+
+        const cached = db.prepare('SELECT * FROM channels WHERE link = ?').get(fullLink);
+        if (cached) return res.json(cached);
+
         const chats = await fetchAllChats();
         const chat = chats.find(c => c.link === fullLink);
 

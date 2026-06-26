@@ -36,6 +36,18 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_requests_user ON requests(user_id);
     CREATE INDEX IF NOT EXISTS idx_requests_channel ON requests(channel_id);
     CREATE INDEX IF NOT EXISTS idx_requests_timestamp ON requests(timestamp);
+
+    CREATE TABLE IF NOT EXISTS channels (
+        chat_id INTEGER PRIMARY KEY,
+        title TEXT,
+        link TEXT,
+        type TEXT,
+        is_public INTEGER DEFAULT 0,
+        participants_count INTEGER,
+        updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_channels_link ON channels(link);
 `);
 
 export default db;

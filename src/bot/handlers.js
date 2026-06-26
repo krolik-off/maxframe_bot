@@ -2,6 +2,7 @@ import MaxframeApi from '../services/maxframeApi.js';
 import { generateStatsImage } from '../services/imageGenerator.js';
 import { parseGrowth } from '../utils/parsers.js';
 import stats from '../services/stats.js';
+import db from '../services/db.js';
 
 const maxframeApi = new MaxframeApi();
 
@@ -42,6 +43,22 @@ setInterval(() => {
  * @param {import('@maxhub/max-bot-api').Bot} bot
  */
 export function registerHandlers(bot) {
+    bot.on('bot_added', (ctx) => {
+        const chat = ctx.update.chat;
+        if (!chat || chat.type !== 'channel') return;
+        console.log(`[Handler] Bot added to channel: ${chat.chat_id}, title: ${chat.title}`);
+        db.prepare(`
+            INSERT INTO channels (chat_id, title, link, type, is_public, participants_count, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(chat_id) DO UPDATE SET
+                title = excluded.title,
+                link = excluded.link,
+                is_public = excluded.is_public,
+                participants_count = excluded.participants_count,
+                updated_at = excluded.updated_at
+        `).run(chat.chat_id, chat.title, chat.link ?? null, chat.type, chat.is_public ? 1 : 0, chat.participants_count ?? null, new Date().toISOString());
+    });
+
     // Обработка пересланных сообщений
     bot.on('message_created', async (ctx) => {
         const message = ctx.update.message;
