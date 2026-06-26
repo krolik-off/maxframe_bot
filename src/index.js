@@ -38,45 +38,72 @@ async function registerWebhook() {
 const app = express();
 app.use(express.json());
 
-app.get('/debug-chats', async (req, res) => {
+function requireApiAuth(req, res) {
     const authHeader = req.headers['authorization'];
     if (!authHeader || authHeader !== `Bearer ${config.api.secretKey}`) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: 'Unauthorized' });
+        return false;
     }
-    const url = new URL('https://botapi.max.ru/chats');
-    const apiRes = await fetch(url, { headers: { 'Authorization': config.bot.token } });
-    return res.json(await apiRes.json());
+    return true;
+}
+
+async function fetchAllChats() {
+    const allChats = [];
+    let marker = null;
+    do {
+        const url = new URL('https://botapi.max.ru/chats');
+        url.searchParams.set('count', '100');
+        if (marker) url.searchParams.set('marker', marker);
+        const apiRes = await fetch(url, { headers: { 'Authorization': config.bot.token } });
+        const data = await apiRes.json();
+        if (data.chats) allChats.push(...data.chats);
+        marker = data.marker || null;
+    } while (marker);
+    return allChats;
+}
+
+app.get('/list-channels', async (req, res) => {
+    if (!requireApiAuth(req, res)) return;
+    try {
+        const chats = await fetchAllChats();
+        return res.json(chats.map(c => ({
+            chat_id: c.chat_id,
+            title: c.title,
+            link: c.link,
+            type: c.type,
+            is_public: c.is_public,
+            participants_count: c.participants_count
+        })));
+    } catch (e) {
+        console.error('[API] /list-channels error:', e.message);
+        return res.status(500).json({ error: e.message });
+    }
 });
 
 app.get('/channel-info', async (req, res) => {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader || authHeader !== `Bearer ${config.api.secretKey}`) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!requireApiAuth(req, res)) return;
 
     const inviteLink = req.query.link;
-    if (!inviteLink) {
-        return res.status(400).json({ error: 'Missing link parameter' });
-    }
-    try {
-        const fullLink = inviteLink.startsWith('http') ? inviteLink : `https://max.ru/join/${inviteLink.split('/').pop()}`;
-        let marker = null;
-        let chat = null;
+    const chatId = req.query.chat_id;
 
-        do {
-            const url = new URL('https://botapi.max.ru/chats');
-            url.searchParams.set('count', '100');
-            if (marker) url.searchParams.set('marker', marker);
+    if (!inviteLink && !chatId) {
+        return res.status(400).json({ error: 'Missing link or chat_id parameter' });
+    }
+
+    try {
+        if (chatId) {
+            const url = new URL(`https://botapi.max.ru/chats/${chatId}`);
             const apiRes = await fetch(url, { headers: { 'Authorization': config.bot.token } });
-            const data = await apiRes.json();
-            console.log(`[API] chats page: ${data.chats?.length}, marker: ${data.marker}, looking for: ${fullLink}`);
-            data.chats?.forEach(c => console.log(`  link: ${c.link}`));
-            chat = (data.chats || []).find(c => c.link === fullLink);
-            marker = data.marker || null;
-        } while (!chat && marker);
+            if (!apiRes.ok) return res.status(404).json({ error: 'Channel not found' });
+            return res.json(await apiRes.json());
+        }
+
+        const fullLink = inviteLink.startsWith('http') ? inviteLink : `https://max.ru/join/${inviteLink.split('/').pop()}`;
+        const chats = await fetchAllChats();
+        const chat = chats.find(c => c.link === fullLink);
 
         if (!chat) {
-            return res.status(404).json({ error: 'Channel not found. Make sure the bot is a member.' });
+            return res.status(404).json({ error: 'Channel not found. Make sure the bot is a member and the link is current.' });
         }
         return res.json(chat);
     } catch (e) {
