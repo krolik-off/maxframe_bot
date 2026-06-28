@@ -86,6 +86,8 @@ class MaxframeApi {
             isPublic: channelInfo.is_public ?? null,
             categories: [channelInfo.category, channelInfo.category2].filter(Boolean),
             isSuspicious: !!(channelInfo.is_fraud || channelInfo.is_followers_fraud || channelInfo.is_owner_fraud),
+            isFraud: !!channelInfo.is_fraud,
+            fraudReason: channelInfo.fraud_reason || null,
             dynamics: {
                 today: extraData.growth?.h24 ?? null,
                 week: extraData.growth?.week ?? null,

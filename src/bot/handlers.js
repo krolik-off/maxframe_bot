@@ -210,12 +210,24 @@ function formatTextStats(data) {
 
     const dyn = data.dynamics || {};
 
+    const fraudLines = [];
+    if (data.isFraud && data.fraudReason) {
+        const fraudReason = data.fraudReason;
+        const idx = fraudReason.toLowerCase().indexOf('доказательства');
+        const before = idx !== -1 ? fraudReason.slice(0, idx).trim() : fraudReason.trim();
+        const proof = idx !== -1 ? fraudReason.slice(idx).trim() : '';
+        fraudLines.push(`⚠️ *${before}*`);
+        if (proof) fraudLines.push(proof);
+        fraudLines.push('');
+    }
+
     const channelTitle = data.channelName || 'Канал';
     const channelLine = data.link
         ? `📢   [${channelTitle}](${data.link})`
         : `📢   ${channelTitle}`;
 
     const lines = [
+        ...fraudLines,
         channelLine,
         `👥   ${formatNum(data.subscribers)}`,
         '',

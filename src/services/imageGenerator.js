@@ -60,6 +60,8 @@ export async function generateStatsImage(data) {
     };
     const er = data.er ?? null;
     const isSuspicious = data.isSuspicious || false;
+    const isFraud = data.isFraud || false;
+    const fraudReason = data.fraudReason || null;
     const channelName = data.channelName || 'Название канала';
     const channelAvatar = data.channelAvatar || null;
     const categories = data.categories || [];
@@ -73,6 +75,8 @@ export async function generateStatsImage(data) {
         channelAvatar,
         categories,
         isSuspicious,
+        isFraud,
+        fraudReason,
         subs,
         dyn,
         avgViews,
@@ -116,6 +120,12 @@ export async function generateStatsImage(data) {
     return image;
 }
 
+function getFraudBannerText(fraudReason) {
+    if (!fraudReason) return '';
+    const idx = fraudReason.toLowerCase().indexOf('доказательства');
+    return idx !== -1 ? fraudReason.slice(0, idx).trim() : fraudReason.trim();
+}
+
 function buildHtml(params) {
     const {
         logoBase64,
@@ -123,6 +133,8 @@ function buildHtml(params) {
         channelAvatar,
         categories,
         isSuspicious,
+        isFraud,
+        fraudReason,
         subs,
         dyn,
         avgViews,
@@ -187,6 +199,13 @@ function buildHtml(params) {
                 </div>
             </div>
         </div>
+
+        <!-- Fraud Banner -->
+        ${isFraud && fraudReason ? `
+        <div style="background: #dc2626; color: #fff; padding: 22px 36px; border-radius: 16px; margin-bottom: 20px; font-size: 26px; font-weight: 700; text-align: center; letter-spacing: 0.3px;">
+            ⚠️ ${getFraudBannerText(fraudReason)}
+        </div>
+        ` : ''}
 
         <!-- Stats Row -->
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
