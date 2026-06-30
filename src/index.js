@@ -20,7 +20,7 @@ process.on('unhandledRejection', (err) => {
 });
 
 async function registerWebhook() {
-    const url = `https://platform-api.max.ru/subscriptions`;
+    const url = `https://platform-api2.max.ru/subscriptions`;
     const webhookUrl = config.webhook.url;
 
     const res = await fetch(url, {
