@@ -36,7 +36,7 @@ async function registerWebhook() {
     });
 
     const data = await res.json();
-    console.log('[Bot] Webhook registered:', JSON.stringify(data));
+    console.log(`[Bot] Webhook registered on ${url}:`, JSON.stringify(data));
 }
 
 const app = express();
