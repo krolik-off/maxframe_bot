@@ -7,6 +7,38 @@ import db from './services/db.js';
 
 const bot = new Bot(config.bot.token);
 
+function isMalformedUpdate(update) {
+    if (!update || typeof update !== 'object' || !update.update_type) return true;
+    return update.update_type === 'message_created' && !update.message?.body;
+}
+
+// Краткая сводка апдейта для лога (undefined-поля JSON.stringify отбрасывает)
+function summarizeUpdate(update) {
+    if (!update || typeof update !== 'object') return { body_type: typeof update };
+    const message = update.message;
+    return {
+        update_type: update.update_type,
+        timestamp: update.timestamp,
+        keys: Object.keys(update),
+        chat_id: message?.recipient?.chat_id ?? update.chat_id,
+        chat_type: message?.recipient?.chat_type,
+        is_channel: update.is_channel,
+        sender_id: message?.sender?.user_id ?? update.user?.user_id,
+        mid: message?.body?.mid,
+        created_at: message?.created_at,
+        text: message?.body?.text?.slice(0, 100),
+        attachments: message?.body?.attachments?.map(a => a.type),
+        link_type: message?.link?.type,
+        link_chat_id: message?.link?.chat_id
+    };
+}
+
+// Платформа иногда присылает message_created без message — библиотека на таком падает
+bot.use((ctx, next) => {
+    if (isMalformedUpdate(ctx.update)) return;
+    return next();
+});
+
 registerCommands(bot);
 registerHandlers(bot);
 
@@ -122,11 +154,35 @@ app.get('/channel-info', async (req, res) => {
     }
 });
 
+let webhookSeq = 0;
+
 app.post('/webhook', (req, res) => {
     res.sendStatus(200);
-    bot.handleUpdate(req.body).catch((err) => {
-        console.error('[Bot] Error handling update:', err.message);
-    });
+
+    const tag = `[Webhook #${++webhookSeq}]`;
+    const startTime = Date.now();
+    const update = req.body;
+    console.log(`${tag} Incoming:`, JSON.stringify(summarizeUpdate(update)));
+
+    if (isMalformedUpdate(update)) {
+        // Полный дамп запроса, чтобы понять, кто и что прислал
+        console.warn(`${tag} Malformed update, skipping. Full request:`, JSON.stringify({
+            ip: req.ip,
+            remote_address: req.socket.remoteAddress,
+            headers: { ...req.headers, authorization: req.headers.authorization ? '[hidden]' : undefined },
+            body: update
+        }));
+        return;
+    }
+
+    bot.handleUpdate(update)
+        .then(() => {
+            console.log(`${tag} Handled in ${Date.now() - startTime}ms`);
+        })
+        .catch((err) => {
+            console.error(`${tag} Error handling update after ${Date.now() - startTime}ms:`, err.stack || err.message);
+            console.error(`${tag} Failed update:`, JSON.stringify(update));
+        });
 });
 
 app.listen(3000, async () => {
