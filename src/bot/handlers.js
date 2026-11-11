@@ -3,9 +3,35 @@ import { generateStatsImage } from '../services/imageGenerator.js';
 import { parseGrowth } from '../utils/parsers.js';
 import stats from '../services/stats.js';
 import db from '../services/db.js';
+import { syncMembership } from '../services/membershipSync.js';
 import config from '../config.js';
 
 const maxframeApi = new MaxframeApi();
+
+const deleteChannel = db.prepare('DELETE FROM channels WHERE chat_id = ?');
+
+const insertBotEvent = db.prepare(`
+    INSERT INTO bot_events (event_type, chat_id, user_id, user_name, is_channel, timestamp)
+    VALUES (?, ?, ?, ?, ?, ?)
+`);
+
+function logBotEvent(update) {
+    const { update_type, chat_id, user, is_channel, timestamp } = update;
+    const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.name || null;
+    try {
+        insertBotEvent.run(
+            update_type,
+            chat_id ?? null,
+            user?.user_id ?? null,
+            name,
+            is_channel === undefined ? null : (is_channel ? 1 : 0),
+            new Date(timestamp || Date.now()).toISOString()
+        );
+        console.log(`[Handler] ${update_type}: chat ${chat_id}, user ${user?.user_id}`);
+    } catch (e) {
+        console.error(`[Handler] Failed to log ${update_type}:`, e.message);
+    }
+}
 
 // Rate limit: 10 запросов в минуту на пользователя
 const RATE_LIMIT = 10;
@@ -46,7 +72,9 @@ setInterval(() => {
 export function registerHandlers(bot) {
     bot.on('bot_added', async (ctx) => {
         const { chat_id, is_channel } = ctx.update;
+        logBotEvent(ctx.update);
         if (!is_channel) return;
+        syncMembership();
         console.log(`[Handler] Bot added to channel: ${chat_id}`);
         try {
             const apiRes = await fetch(`https://botapi.max.ru/chats/${chat_id}`, {
@@ -68,6 +96,24 @@ export function registerHandlers(bot) {
         } catch (e) {
             console.error('[Handler] bot_added fetch error:', e.message);
         }
+    });
+
+    // Бота удалили из чата/канала
+    bot.on('bot_removed', (ctx) => {
+        const { chat_id, is_channel } = ctx.update;
+        logBotEvent(ctx.update);
+        if (!is_channel) return;
+        try {
+            deleteChannel.run(chat_id);
+        } catch (e) {
+            console.error('[Handler] Failed to delete channel from cache:', e.message);
+        }
+        syncMembership();
+    });
+
+    // Пользователь остановил бота в личке
+    bot.on('bot_stopped', (ctx) => {
+        logBotEvent(ctx.update);
     });
 
     // Обработка пересланных сообщений

@@ -48,6 +48,27 @@ db.exec(`
     );
 
     CREATE INDEX IF NOT EXISTS idx_channels_link ON channels(link);
+
+    CREATE TABLE IF NOT EXISTS bot_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        chat_id INTEGER,
+        user_id INTEGER,
+        user_name TEXT,
+        is_channel INTEGER,
+        timestamp TEXT NOT NULL,
+        synced_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bot_events_type ON bot_events(event_type);
+    CREATE INDEX IF NOT EXISTS idx_bot_events_user ON bot_events(user_id);
+    CREATE INDEX IF NOT EXISTS idx_bot_events_timestamp ON bot_events(timestamp);
 `);
+
+// Миграция: synced_at для таблиц bot_events, созданных до появления синхронизации с MaxFrame
+const botEventsColumns = db.prepare('PRAGMA table_info(bot_events)').all().map(c => c.name);
+if (!botEventsColumns.includes('synced_at')) {
+    db.exec('ALTER TABLE bot_events ADD COLUMN synced_at TEXT');
+}
 
 export default db;

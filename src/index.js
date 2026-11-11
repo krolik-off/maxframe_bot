@@ -4,6 +4,7 @@ import config from './config.js';
 import { registerCommands } from './bot/commands.js';
 import { registerHandlers } from './bot/handlers.js';
 import db from './services/db.js';
+import { startMembershipSync } from './services/membershipSync.js';
 
 const bot = new Bot(config.bot.token);
 
@@ -42,7 +43,7 @@ async function registerWebhook() {
         },
         body: JSON.stringify({
             url: webhookUrl,
-            update_types: ['message_created', 'bot_added', 'bot_removed']
+            update_types: ['message_created', 'bot_added', 'bot_removed', 'bot_stopped']
         })
     });
 
@@ -158,5 +159,6 @@ app.post('/webhook', (req, res) => {
 app.listen(3000, async () => {
     console.log('[Bot] Webhook server listening on port 3000');
     await registerWebhook();
+    startMembershipSync();
     console.log('[Bot] Started');
 });

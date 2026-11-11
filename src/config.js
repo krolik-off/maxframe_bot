@@ -6,6 +6,7 @@ export default {
     },
     maxframe: {
         apiUrl: process.env.MAXFRAME_API_URL || 'https://maxframe.ru/api/bot/channel-profile/',
+        membershipUrl: process.env.MAXFRAME_MEMBERSHIP_URL || 'https://maxframe.ru/api/bot/channel-membership/',
         secretKey: process.env.MAXFRAME_SECRET_KEY
     },
     webhook: {

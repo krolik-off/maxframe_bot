@@ -52,6 +52,32 @@ class MaxframeApi {
     }
 
     /**
+     * Сообщить MaxFrame о добавлении/удалении бота из каналов (до 1000 событий за раз)
+     * @param {{max_channel_id: number, bot_in_channel: boolean, event_time: number}[]} events
+     * @returns {Promise<boolean>} true, если MaxFrame принял события
+     */
+    async sendChannelMembership(events) {
+        try {
+            const response = await fetch(config.maxframe.membershipUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secret_key: this.secretKey, events })
+            });
+            const text = await response.text();
+            let json = null;
+            try { json = JSON.parse(text); } catch (_) {}
+            if (!response.ok || json?.status !== 'success') {
+                console.error(`[MaxframeApi] channel-membership failed: ${response.status}: ${text.slice(0, 500)}`);
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('[MaxframeApi] channel-membership request failed:', error.message);
+            return false;
+        }
+    }
+
+    /**
      * @private
      */
     _normalizeResponse(data) {
